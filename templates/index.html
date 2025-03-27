@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 50px;
+        }
+        .form-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        .form-container input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Fraud Detection System</h1>
+        <form id="fraudForm">
+            <label for="V17">V17:</label>
+            <input type="number" step="any" id="V17" name="V17" required>
+
+            <label for="V14">V14:</label>
+            <input type="number" step="any" id="V14" name="V14" required>
+
+            <label for="V12">V12:</label>
+            <input type="number" step="any" id="V12" name="V12" required>
+
+            <label for="V10">V10:</label>
+            <input type="number" step="any" id="V10" name="V10" required>
+
+            <label for="V16">V16:</label>
+            <input type="number" step="any" id="V16" name="V16" required>
+
+            <label for="V3">V3:</label>
+            <input type="number" step="any" id="V3" name="V3" required>
+
+            <label for="V7">V7:</label>
+            <input type="number" step="any" id="V7" name="V7" required>
+
+            <label for="V11">V11:</label>
+            <input type="number" step="any" id="V11" name="V11" required>
+
+            <label for="V4">V4:</label>
+            <input type="number" step="any" id="V4" name="V4" required>
+
+            <label for="Amount">Amount:</label>
+            <input type="number" step="any" id="Amount" name="Amount" required>
+
+            <button type="submit">Check Fraud</button>
+        </form>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        document.getElementById('fraudForm').addEventListener('submit', function(event) {
+            event.preventDefault();  // Prevent form submission
+
+            // Get form data
+            const formData = {
+                V17: parseFloat(document.getElementById('V17').value),
+                V14: parseFloat(document.getElementById('V14').value),
+                V12: parseFloat(document.getElementById('V12').value),
+                V10: parseFloat(document.getElementById('V10').value),
+                V16: parseFloat(document.getElementById('V16').value),
+                V3: parseFloat(document.getElementById('V3').value),
+                V7: parseFloat(document.getElementById('V7').value),
+                V11: parseFloat(document.getElementById('V11').value),
+                V4: parseFloat(document.getElementById('V4').value),
+                Amount: parseFloat(document.getElementById('Amount').value),
+            };
+
+            // Send data to Flask API
+            fetch('/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ features: Object.values(formData) }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display result
+                const resultDiv = document.getElementById('result');
+                if (data.prediction === 1) {
+                    resultDiv.innerHTML = `Fraud Detected! Probability: ${data.fraud_probability}`;
+                    resultDiv.style.color = 'red';
+                } else {
+                    resultDiv.innerHTML = `Transaction is Legitimate. Probability: ${data.fraud_probability}`;
+                    resultDiv.style.color = 'green';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>

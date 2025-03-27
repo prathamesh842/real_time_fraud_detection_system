@@ -1,0 +1,76 @@
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  kafka:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    depends_on:
+      - zookeeper
+
+  create-topics:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: create-topics
+    depends_on:
+      - kafka
+    entrypoint: [ '/bin/sh', '-c' ]
+    command: |
+      "
+      # blocks until kafka is reachable
+      kafka-topics --bootstrap-server kafka:9092 --list
+
+      echo -e 'Creating kafka topics'
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic transactions --replication-factor 1 --partitions 1
+
+      echo -e 'Successfully created the following topics:'
+      kafka-topics --bootstrap-server kafka:9092 --list
+      "
+
+  app:
+    build: .
+    container_name: credit-card-detection
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./project:/app/project
+      - ./DATASET:/app/DATASET
+      - ./templates:/app/templates
+    environment:
+      - FLASK_APP=app.py
+      - FLASK_ENV=development
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    depends_on:
+      - create-topics
+
+  producer:
+    build: .
+    container_name: credit-card-producer
+    volumes:
+      - ./project:/app/project
+      - ./DATASET:/app/DATASET
+    environment:
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+    command: python /app/project/producer.py
+    depends_on:
+      - create-topics
+
+  kafka-console-consumer:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: kafka-console-consumer
+    command: kafka-console-consumer --bootstrap-server kafka:9092 --topic transactions --from-beginning
+    depends_on:
+      - create-topics
